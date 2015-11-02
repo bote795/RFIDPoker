@@ -1,0 +1,14 @@
+﻿Build started 11/2/2015 1:12:43 PM.
+     1>Project "\\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Poker\Poker.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\Poker.pch" /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt Poker.cpp
+         Poker.cpp
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"\\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Debug\Poker.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"\\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Debug\Poker.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"\\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Debug\Poker.lib" /MACHINE:X86 Debug\Poker.obj
+         Debug\stdafx.obj
+         Poker.vcxproj -> \\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Debug\Poker.exe
+     1>Done Building Project "\\filer.cse.tamu.edu\ugrads\t\tshaw\ms_windows\cpsc_redirected\Desktop\Poker\Poker\Poker.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:04.36
