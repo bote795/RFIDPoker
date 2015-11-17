@@ -38,6 +38,20 @@ struct Table
 	int total_players;		// number of total players
 	int pot;				// current amount of chips in the pot
 	int dealer_button;		// player p index of which player has the dealer chip
+	int AI_index;			// index of AI player
+	int is_AI;
+};
+
+struct Card
+{
+	int number;
+	char suit;
+};
+
+struct AI
+{
+	Card c1;
+	Card c2;
 };
 
 Table t;
@@ -60,11 +74,31 @@ int get_bet_amount(int start, int amount_to_call)
 	return bet;
 }
 
+int	get_AI_bet(int start, int amount_to_call)
+{
+	printf("--------Table---------\n");
+	printf("Pot size: %d\n", t.pot);
+	printf("--------Player %d-------\n", start+1);
+	printf("Stack: %d\n", t.p[start].stack);
+	printf("Current Max Bet: %d\n", amount_to_call);
+	printf("Bet for round: %d\n", t.p[start].bet_for_round);
+	printf("Amount to call: %d\n", amount_to_call-t.p[start].bet_for_round);
+	printf("AI bets with %d\n\n", amount_to_call+5);
+	return amount_to_call+5;
+}
+
 int get_total_players()
 {
 	printf("*Input the total number of players (n<10): ");
 	int total = 0;
 	std::cin >> total;
+	printf("*Is there an AI player? ");
+	char response;
+	std::cin >> response;
+	if(response == 'y')
+		t.is_AI = 1;
+	else
+		t.is_AI = 0;
 	printf("\n");
 	return total;
 }
@@ -107,11 +141,69 @@ int next_player_hand(int base_index)
 	return next_index;
 }
 
+// input the AI cards via the RFID scanner
+void input_AI_cards()
+{
+	
+}
 
-void betting_round(int start, int max_bet)
+// input the flop cards via the RFID scanner
+void input_flop_cards()
+{
+	
+}
+
+// input the turn cards via the RFID scanner
+void input_turn_cards()
+{
+	
+}
+
+// input the river cards via the RFID scanner
+void input_river_cards()
+{
+	
+}
+
+// prints to players to see who winner is, gets input, return value is player number (NOT INDEX)
+int get_winner()
+{
+	// temp solution
+	return next_player_hand(0);
+}
+
+// set the winner of the hand
+void set_winner(int who_won)
+{
+	printf("\n********************\nPlayer %d won the hand! %d will be added to their stack of %d!\n********************\n\n", who_won+1, t.pot, t.p[who_won].stack);
+	t.p[who_won].stack += t.pot;
+	t.pot = 0;
+	for(int i = 0; i < t.total_players; ++i)
+	{
+		if(t.p[i].stack == 0)
+			t.p[i].in_game = 0;
+	}
+}
+
+// input which player was the winner of the showdown, get to river and betting is over
+void input_winner()
+{
+	// get which is winner from numpad
+	printf("SHOWDOWN!!!\n");
+
+	int winner = get_winner();
+
+	set_winner(winner);
+
+}
+
+int betting_round(int start, int max_bet)
 {
 	// the player index with the max bet
 	int max_index = start;
+
+	// index of player who won
+	int who_won = -1;
 
 	// finds out the number of players still in the hand
 	int total_players_hand = 0;
@@ -127,18 +219,33 @@ void betting_round(int start, int max_bet)
 		
 		// find next player to bet who is in hand
 		start = next_player_hand(start);
+
+		// if player is still in hand, but has already gone all in, skip that player
+		while(t.p[start].stack == 0)
+			start = next_player_hand(start);
 		
 		// prompt player at index with amount to call
 		// display the current players stack, amount to call, and current bet as they input it
 		// return int of what value they put into numpad before pressing enter
-		int bet = get_bet_amount(start, max_bet);
+		int bet = 0;
+		if(t.is_AI == 1 && t.AI_index == start)
+			bet = get_AI_bet(start, max_bet);
+		else
+			bet = get_bet_amount(start, max_bet);
+
+		// the player goes all in
+		if(bet > t.p[start].stack)
+		{
+			bet = t.p[start].stack;
+		}
+
 		t.p[start].bet_for_round += bet;
 		t.p[start].stack -= bet;
 
-
+		// check the bet
 		if(t.p[start].bet_for_round == max_bet)
 		{
-			// the called the current max bet
+			// they called the current max bet
 			t.pot += bet;
 		}
 		else if(t.p[start].bet_for_round > max_bet)
@@ -154,9 +261,29 @@ void betting_round(int start, int max_bet)
 			t.p[start].in_hand = 0;
 			t.p[start].stack += bet;
 			t.p[start].bet_for_round -= bet;
+
+			// check if hand is over if there is only 1 person left
+			int players_left = 0;
+			int player_index = -1;
+			for(int i = 0; i < t.total_players; ++i)
+			{
+				if(t.p[i].in_hand == 1)
+				{
+					++players_left;
+					player_index = i;
+				}
+			}
+
+			// hand is over and player won
+			if(players_left == 1)
+				return player_index;
+
 		}
 	}
 	
+	// check if betting round is done
+	// occurs when all players in the hand have bet the same amount for the round
+	// or if they have gone all in
 	bool done = true;
 	int bet = -1;
 	for(int i = 0; i < t.total_players; ++i)
@@ -176,13 +303,20 @@ void betting_round(int start, int max_bet)
 		}
 	}
 
+	
 	if(!done)
-		betting_round(max_index, max_bet);
+		who_won = betting_round(max_index, max_bet);
+
+	// once betting round is over, set eveyone's bet for round to 0
+	for(int i = 0; i < t.total_players; ++i)
+		t.p[i].bet_for_round = 0;
+
+	return who_won;
 
 	// if everyone's bet in this round is the same, then we are done, else need to still loop thru the players still in game
 }
 
-void start_hand()
+int start_hand()
 {
 	
 	printf("Hand is starting!\n");
@@ -191,11 +325,16 @@ void start_hand()
 	
 	// ************need to check to see if these players have enough for blinds*************
 	
+	printf("--------------------\n");
+
 	// set everyone who is in game to be in hand as well
 	for(int i = 0; i < t.total_players; ++i)
 	{
 		t.p[i].bet_for_round = 0;
+		printf("Player %d's stack: %d\n", i+1, t.p[i].stack);
 	}
+
+	printf("--------------------\n");
 
 	printf("Player %d has the dealer chip.\n", t.dealer_button+1);
 	
@@ -223,31 +362,63 @@ void start_hand()
 		}
 	}
 
+	// input AI's cards into system
+	input_AI_cards();
+
 	// cards are then dealt, blinds set, now betting round
 	int amount_to_call = BIG_BLIND;
 	
 	// start is the current index of the player who needs to bet
 	int start = big_index;
 	
-	betting_round(start, amount_to_call);
+	return betting_round(start, amount_to_call);
 	
 }
 
-void flop()
+int flop()
 {
 	printf("The flop is starting!\n");
 
+	input_flop_cards();
+
+	int start = t.dealer_button;
+	if(t.p[start].in_hand == 0)
+	{
+		start = next_player_hand(start);
+	}
+
+	return betting_round(start, 0);
+
 }
 
-void turn()
+int turn()
 {
 	printf("The turn is starting!\n");
 
+	input_turn_cards();
+
+	int start = t.dealer_button;
+	if(t.p[start].in_hand == 0)
+	{
+		start = next_player_hand(start);
+	}
+
+	return betting_round(start, 0);
 }
 
-void river()
+int river()
 {
 	printf("The river is starting!\n");
+
+	input_river_cards();
+
+	int start = t.dealer_button;
+	if(t.p[start].in_hand == 0)
+	{
+		start = next_player_hand(start);
+	}
+
+	return betting_round(start, 0);
 
 }
 
@@ -256,14 +427,20 @@ void run_Game()
 	bool done = check_game_over();
 	while(!done)
 	{
+		int who_won;
 
-		start_hand();
+		who_won = start_hand();
 
-		flop();
+		if(who_won == -1) who_won = flop();
 
-		turn();
+		if(who_won == -1) who_won = turn();
 
-		river();
+		if(who_won == -1) who_won = river();
+
+		if(who_won == -1) 
+			input_winner();
+		else
+			set_winner(who_won);
 
 		done = check_game_over();
 		
@@ -290,6 +467,19 @@ void initializeGame()
 		a.in_hand = 0;
 		t.p[i] = a;
 	}
+
+	// if AI is enabled, add AI player with index and increase total players
+	if(t.is_AI == 1)
+	{
+		Player a;
+		a.stack = INITIAL_STACK;
+		a.in_game = 1;
+		a.in_hand = 0;
+		t.p[t.total_players] = a;
+		t.AI_index = t.total_players;
+		++t.total_players;
+	}
+
 	printf("Time to start the game!\n");
 	run_Game();
 }
