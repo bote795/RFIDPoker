@@ -89,12 +89,12 @@ char keys[ROWS][COLS] = {
   {'*','0','#'}
 };
 // Connect keypad ROW0, ROW1, ROW2 and ROW3 to these Arduino pins.
-byte rowPins[ROWS] = { 40, 42,44, 46 };
+byte rowPins[ROWS] = { 46, 48,51, 52 };
 // Connect keypad COL0, COL1 and COL2 to these Arduino pins.
-byte colPins[COLS] = { 34, 36, 38 }; 
+byte colPins[COLS] = { 41, 43, 45 };
 
 // Create the Keypad
-Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 
 void setup() {
@@ -118,21 +118,13 @@ void loop() {
   // Flag so we know when a tag is over
   boolean tag = false;
 
-char key = kpd.getKey();
-  if(key)  // Check for a valid key.
+  int inputInt = readFromKeypad();
+  if(inputInt != 0)
   {
-    switch (key)
-    {
-      case '*':
-        Serial.println("*");
-        break;
-      case '#':
-        Serial.println("#");
-        break;
-      default:
-        Serial.println(key);
-    }
-  }
+    Serial.print("this is the main loop bro ");
+    Serial.println(inputInt);  
+  }  
+
 
 
 
@@ -219,5 +211,56 @@ int checkTag(char nTag[], char oTag[]) {
       }
     }
   return 1;
+}
+
+//allows you to pass text
+//waits for input and returns it
+long writeAndRead(String text)
+{
+    lcd.setCursor(0, 1);
+    lcd.print(text);
+    lcd.setCursor(0, 2);
+   // return readFromKeypad();   
+}
+
+//function used to read from keyPad
+//# = used for enter
+//* =  used for backspace
+long readFromKeypad()
+{
+  char input[10];
+  long i=0;
+  char key = keypad.getKey();
+  if (key)
+  {
+    while( key != '#')
+    {
+      if(key)
+      {
+        if(key == '*')
+        { 
+          if(i > 0)    //check for going under index
+          {
+            i--;
+          }
+          input[i]= '\0';
+        }
+        else
+        {
+          if( i < 9)  //check for going over
+          {
+            input[i]= key;
+            i++;
+            
+          }
+        }
+        Serial.println(atol(input));
+        //lcd.print(atol(input));
+        
+       }
+       key = keypad.getKey();
+     }
+  }
+  return atol(input);
 }
 
