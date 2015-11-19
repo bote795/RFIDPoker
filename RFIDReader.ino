@@ -208,100 +208,22 @@ void setup() {
   // Print a message to the LCD.
   lcd.print("hello, world!");
   Serial.println("Booting up!");
-
+writeToLCD("How much you call", 0);
 
 }
 
 void loop() {
-  // Counter for the newTag array
-  int i = 0;
-  // Variable to hold each byte read from the serial buffer
-  int readByte;
-  // Flag so we know when a tag is over
-  boolean tag = false;
-/*
-  long inputInt = readFromKeypad();
-  if(inputInt != 0)
+
+  
+  long inputInt = readFromKeypad(1);
+  if(inputInt != -1)
   {
     Serial.print("this is the main loop bro ");
     Serial.println(inputInt);  
   }  
-
-*/
-  writeAndRead("How much do you call");
-
-  // This makes sure the whole tag is in the serial buffer before
-  // reading, the Arduino can read faster than the ID module can deliver!
- // Serial.println(rSerial.available());
-  if (rSerial.available() == tagLen) {
-    tag = true;
-    Serial.println("avilable tag");
-  }
-
-  if (tag == true) {
-    while (rSerial.available()) {
-      // Take each byte out of the serial buffer, one at a time
-      readByte = rSerial.read();
-      Serial.println("reading tag");
-      /* This will skip the first byte (2, STX, start of text) and the last three,
-      ASCII 13, CR/carriage return, ASCII 10, LF/linefeed, and ASCII 3, ETX/end of 
-      text, leaving only the unique part of the tag string. It puts the byte into
-      the first space in the array, then steps ahead one spot */
-      if (readByte != 2 && readByte!= 13 && readByte != 10 && readByte != 3) {
-        newTag[i] = readByte;
-        i++;
-      }
-
-      // If we see ASCII 3, ETX, the tag is over
-      if (readByte == 3) {
-        tag = false;
-      }
-
-    }
-  }
-
-
-  // don't do anything if the newTag array is full of zeroes
-  if (strlen(newTag)== 0) {
-    return;
-  }
-
-  else {
-    int total = 0;
-    Serial.println("looking for tag");
-    for (int ct=0; ct < kTags; ct++){
-        total += checkTag(newTag, knownTags[ct]);
-    }
-
-    // If newTag matched any of the tags
-    // we checked against, total will be 1
-    if (total > 0) {
-
-      // Put the action of your choice here!
-      
-      // set the cursor to column 0, line 1
-      // (note: line 1 is the second row, since counting begins with 0):
-      lcd.setCursor(0, 1);
-      lcd.print("Success!");
-      lcd.setCursor(0, 2);
-      lcd.print(newTag);
-       Serial.println("Success!");
-    }
-
-    else {
-        // This prints out unknown cards so you can add them to your knownTags as needed
-        Serial.print("Unknown tag! ");
-        Serial.print(newTag);
-        Serial.println();
-    }
-  }
-
-  // Once newTag has been checked, fill it with zeroes
-  // to get ready for the next tag read
-  for (int c=0; c < idLen; c++) {
-    newTag[c] = 0;
-  }
+  findCards();
 }
+  
 
 // This function steps through both newTag and one of the known
 // tags. If there is a mismatch anywhere in the tag, it will return 0,
@@ -315,46 +237,27 @@ int checkTag(char nTag[], char oTag[]) {
   return 1;
 }
 
-//allows you to pass text
-//waits for input and returns it
-long writeAndRead(String text)
+//text = string to be printed to lcd
+//row = row to be printed out to
+void  writeToLCD(String text, int row)
 {
-    //when text is greater than 20 wrap
-    int lines =round(text.length()/20);
-    String textArray[3];
-    int cursorValue =splitString(text, textArray ,lines);
-    
-    long inputInt = readFromKeypad(lines, cursorValue );
-    if(inputInt != -1)
-    {
-      Serial.print("this is the main loop bro ");
-      Serial.println(inputInt);  
-    }  
-    return inputInt;   
+    lcd.setCursor(0, row);
+    lcd.print("                     ");
+    lcd.setCursor(0, row);
+    lcd.print(text);
+}
+void clearScreen()
+{
+  lcd.clear();
 }
 
-//text = string to be printed
-//ArrayText = array of empty strings with returned strings
-int splitString(String text, String *arrayText, int lines)
-{
-  int end=0;
-  for(int i=0; i < lines && lines < 5; i++)
-  {
-    end = ((i+1) * 20)+i;
-    if( text.length() < end)
-        end= text.length();
-    arrayText[i]= text.substring((i*20)+i,end);   
-    lcd.setCursor(0, i+1);
-    lcd.print(arrayText[i]);
-  }
-  return end;
-}
 //function used to read from keyPad
 //# = used for enter
 //* =  used for backspace
-long readFromKeypad(int lines, int cursorValue)
+long readFromKeypad(int printLine)
 {
-  char input[10];
+  int maxNums = 6;
+  char input[6];
   long i=0;
   char key = keypad.getKey();
   if (key)
@@ -373,15 +276,16 @@ long readFromKeypad(int lines, int cursorValue)
         }
         else
         {
-          if( i < 9)  //check for going over
+          if( i < maxNums-1)  //check for going over
           {
             input[i]= key;
             i++;
             
           }
         }
-        lcd.setCursor(0, lines+1);
+        lcd.setCursor(0, printLine);
         lcd.print("                     ");
+        lcd.setCursor(0, printLine);
         lcd.print(atol(input));
         Serial.println(atol(input));
         //lcd.print(atol(input));
@@ -395,5 +299,90 @@ long readFromKeypad(int lines, int cursorValue)
 
   
   return atol(input);
+}
+
+void findCards()
+{
+    // Counter for the newTag array
+  int i = 0;
+  // Variable to hold each byte read from the serial buffer
+  int readByte;
+  // Flag so we know when a tag is over
+  boolean tag = false;
+  // This makes sure the whole tag is in the serial buffer before
+  // reading, the Arduino can read faster than the ID module can deliver!
+ // Serial.println(rSerial.available());
+ while(!tag){
+    if (rSerial.available() == tagLen) {
+      tag = true;
+      Serial.println("avilable tag");
+    }
+  
+    if (tag == true) {
+      while (rSerial.available()) {
+        // Take each byte out of the serial buffer, one at a time
+        readByte = rSerial.read();
+        Serial.println("reading tag");
+        /* This will skip the first byte (2, STX, start of text) and the last three,
+        ASCII 13, CR/carriage return, ASCII 10, LF/linefeed, and ASCII 3, ETX/end of 
+        text, leaving only the unique part of the tag string. It puts the byte into
+        the first space in the array, then steps ahead one spot */
+        if (readByte != 2 && readByte!= 13 && readByte != 10 && readByte != 3) {
+          newTag[i] = readByte;
+          i++;
+        }
+  
+        // If we see ASCII 3, ETX, the tag is over
+        if (readByte == 3) {
+          tag = false;
+        }
+  
+      }
+    }
+  
+  
+    // don't do anything if the newTag array is full of zeroes
+    if (strlen(newTag)== 0) {
+      return;
+    }
+  
+    else {
+      int total = 0;
+      Serial.println("looking for tag");
+      for (int ct=0; ct < kTags; ct++){
+          total += checkTag(newTag, knownTags[ct]);
+      }
+  
+      // If newTag matched any of the tags
+      // we checked against, total will be 1
+      if (total > 0) {
+  
+        // Put the action of your choice here!
+        
+        // set the cursor to column 0, line 1
+        // (note: line 1 is the second row, since counting begins with 0):
+        lcd.setCursor(0, 1);
+        lcd.print("Success!");
+        lcd.setCursor(0, 2);
+        lcd.print(newTag);
+         Serial.println("Success!");
+      }
+  
+      else {
+          // This prints out unknown cards so you can add them to your knownTags as needed
+          Serial.print("Unknown tag! ");
+          Serial.print(newTag);
+          Serial.println();
+      }
+    }
+  
+    // Once newTag has been checked, fill it with zeroes
+    // to get ready for the next tag read
+    for (int c=0; c < idLen; c++) {
+      newTag[c] = 0;
+    }
+    Serial.println("We are out");
+ }
+  
 }
 
