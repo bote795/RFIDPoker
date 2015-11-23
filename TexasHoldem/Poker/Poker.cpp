@@ -40,18 +40,7 @@ struct Table
 	int dealer_button;		// player p index of which player has the dealer chip
 	int AI_index;			// index of AI player
 	int is_AI;
-};
-
-struct Card
-{
-	int number;
-	char suit;
-};
-
-struct AI
-{
-	Card c1;
-	Card c2;
+	int split[10];
 };
 
 Table t;
@@ -89,7 +78,7 @@ int	get_AI_bet(int start, int amount_to_call)
 
 int get_total_players()
 {
-	printf("*Input the total number of players (n<10): ");
+	printf("*Input total number of players (n<10): ");
 	int total = 0;
 	std::cin >> total;
 	printf("*Is there an AI player? ");
@@ -234,7 +223,7 @@ int betting_round(int start, int max_bet)
 			bet = get_bet_amount(start, max_bet);
 
 		// the player goes all in
-		if(bet > t.p[start].stack)
+		if(bet >= t.p[start].stack)
 		{
 			bet = t.p[start].stack;
 		}
@@ -321,9 +310,12 @@ int start_hand()
 	
 	printf("Hand is starting!\n");
 
+	if(t.is_AI == 1)
+	{
+		input_AI_cards();
+	}
+
 	// deduct blinds--------------------------------------------------
-	
-	// ************need to check to see if these players have enough for blinds*************
 	
 	printf("--------------------\n");
 
@@ -338,16 +330,33 @@ int start_hand()
 
 	printf("Player %d has the dealer chip.\n", t.dealer_button+1);
 	
+	
 	int small_index = next_player_game(t.dealer_button);
-	t.p[small_index].stack -= SMALL_BLIND;
-	t.p[small_index].bet_for_round = SMALL_BLIND;
+	if(t.p[small_index].stack < SMALL_BLIND)
+	{
+		t.p[small_index].bet_for_round = t.p[small_index].stack;
+		t.p[small_index].stack = 0;
+	}
+	else
+	{
+		t.p[small_index].stack -= SMALL_BLIND;
+		t.p[small_index].bet_for_round = SMALL_BLIND;
+	}
 	
 	printf("Deducting small blind of %d from player %d.\n", SMALL_BLIND, small_index+1);
 
 	int big_index = next_player_game(small_index);
-	t.p[big_index].stack -= BIG_BLIND;
-	t.p[big_index].bet_for_round = BIG_BLIND;
-
+	if(t.p[big_index].stack < BIG_BLIND)
+	{
+		t.p[big_index].bet_for_round = t.p[big_index].stack;
+		t.p[big_index].stack = 0;
+		
+	}
+	else
+	{
+		t.p[big_index].stack -= BIG_BLIND;
+		t.p[big_index].bet_for_round = BIG_BLIND;
+	}
 	printf("Deducting big blind of %d from player %d.\n", BIG_BLIND, big_index+1);
 	
 	t.pot = BIG_BLIND + SMALL_BLIND;
@@ -490,4 +499,3 @@ int main()
 	initializeGame();
 	return 0;
 }
-
