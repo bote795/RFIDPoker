@@ -48,8 +48,7 @@ http://bildr.org/2011/02/rfid-arduino/
 #include <Key.h>
 #include <Keypad.h>
 #include <math.h>
-
-
+#include "texasHoldem.h"
 
 // Choose two pins for SoftwareSerial
 SoftwareSerial rSerial(10,11); // RX, TX    input ten 
@@ -301,7 +300,7 @@ long readFromKeypad(int printLine)
   return atol(input);
 }
 
-void findCards()
+Card findCards()
 {
     // Counter for the newTag array
   int i = 0;
@@ -312,6 +311,7 @@ void findCards()
   // This makes sure the whole tag is in the serial buffer before
   // reading, the Arduino can read faster than the ID module can deliver!
  // Serial.println(rSerial.available());
+ Card temp;
  while(!tag){
     if (rSerial.available() == tagLen) {
       tag = true;
@@ -343,31 +343,40 @@ void findCards()
   
     // don't do anything if the newTag array is full of zeroes
     if (strlen(newTag)== 0) {
-      return;
+      temp.number=-1;
+      return temp;
     }
   
     else {
       int total = 0;
+      int ct=0;
       Serial.println("looking for tag");
-      for (int ct=0; ct < kTags; ct++){
+      for (ct=0; ct < kTags; ct++){
           total += checkTag(newTag, knownTags[ct]);
+          if (total > 0)
+              break;
       }
   
       // If newTag matched any of the tags
       // we checked against, total will be 1
       if (total > 0) {
-  
+        char num[3];
+        num[0] =keyTags[ct][1];
+        num[1] =keyTags[ct][2];
         // Put the action of your choice here!
         
         // set the cursor to column 0, line 1
         // (note: line 1 is the second row, since counting begins with 0):
+        
+        temp.number = atoi(num);
+        temp.suit = keyTags[ct][0];
         lcd.setCursor(0, 1);
         lcd.print("Success!");
         lcd.setCursor(0, 2);
         lcd.print(newTag);
-         Serial.println("Success!");
+        Serial.println("Success!");
+        
       }
-  
       else {
           // This prints out unknown cards so you can add them to your knownTags as needed
           Serial.print("Unknown tag! ");
@@ -382,6 +391,7 @@ void findCards()
       newTag[c] = 0;
     }
     Serial.println("We are out");
+    return temp;
  }
   
 }
