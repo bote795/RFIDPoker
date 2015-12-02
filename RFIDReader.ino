@@ -57,17 +57,18 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(20, 4);
   // Print a message to the LCD.
-  lcd.print("hello, world!");
-  Serial.println("Booting up!");
-writeToLCD("How much you call", 0);
+  // lcd.print("hello, world");
+  // Serial.println("Booting up");
+  // Serial.println("Welcome to Texas Holdem");
+  writeToLCD("Welcome to",0);
+  writeToLCD("Texas Holdem",1);
+  delay(2000);
+  initializeGame();
 
 }
 
 void loop() {
-  Serial.println("Welcome to Texas Holdem!\n");
-  writeToLCD("Welcome to Texas Holdem!",0);
-  delay(1000);
-  initializeGame();
+  
 }
   
 

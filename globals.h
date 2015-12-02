@@ -145,5 +145,23 @@ byte colPins[COLS] = { 33, 35, 37 };
 // Create the Keypad
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
+char   buffer[20];
+
+struct Card
+{
+  int number;
+  char suit;
+
+};
+
+struct AI
+{
+  Card c1;
+  Card c2;
+  Card table_cards[5];
+  int table_size;
+};
+
+AI a;
 
 

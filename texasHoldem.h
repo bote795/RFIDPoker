@@ -17,14 +17,12 @@
     // end loop
     // if there is a raise, need to continue betting round till end
 #include "globals.h"
+#include "AI.h"
+
 #define INITIAL_STACK   500
-#define SMALL_BLIND   10
-#define BIG_BLIND     20
-struct Card
-{
-  int number;
-  char suit;
-};
+#define SMALL_BLIND     10
+#define BIG_BLIND       20
+
 struct Player
 {
   int stack;        // current amount of chips a player has
@@ -46,9 +44,6 @@ struct Table
 
 Table t;
 
-
-
-
 // This function steps through both newTag and one of the known
 // tags. If there is a mismatch anywhere in the tag, it will return 0,
 // but if every character in the tag is the same, it returns 1
@@ -61,14 +56,22 @@ int checkTag(char nTag[], char oTag[]) {
   return 1;
 }
 
+void clearBuffer()
+{
+  for(int i = 0; i < 20; ++i)
+    buffer[i] = ' ';
+}
+
 //text = string to be printed to lcd
 //row = row to be printed out to
 void  writeToLCD(String text, int row)
 {
     lcd.setCursor(0, row);
-    lcd.print("                     ");
+    lcd.print("                    ");
     lcd.setCursor(0, row);
+    Serial.println(text);
     lcd.print(text);
+    clearBuffer();
 }
 void clearScreen()
 {
@@ -80,46 +83,50 @@ void clearScreen()
 //* =  used for backspace
 long readFromKeypad(int printLine)
 {
-  int maxNums = 6;
+  int returnVal = -1;
   char input[6];
-  long i=0;
-  char key = keypad.getKey();
-  if (key)
-  {
-    while( key != '#')
+  while(returnVal == -1) {
+    int maxNums = 6;
+    long i=0;
+    char key = keypad.getKey();
+    if (key)
     {
-      if(key)
+      while( key != '#')
       {
-        if(key == '*')
-        { 
-          if(i > 0)    //check for going under index
-          {
-            i--;
-          }
-          input[i]= '\0';
-        }
-        else
+        if(key)
         {
-          if( i < maxNums-1)  //check for going over
-          {
-            input[i]= key;
-            i++;
-            
+          if(key == '*')
+          { 
+            if(i > 0)    //check for going under index
+            {
+              i--;
+            }
+            input[i]= '\0';
           }
-        }
-        lcd.setCursor(0, printLine);
-        lcd.print("                     ");
-        lcd.setCursor(0, printLine);
-        lcd.print(atol(input));
-        Serial.println(atol(input));
-        //lcd.print(atol(input));
-        
+          else
+          {
+            if( i < maxNums-1)  //check for going over
+            {
+              input[i]= key;
+              i++;
+              
+            }
+          }
+          lcd.setCursor(0, printLine);
+          lcd.print("                    ");
+          lcd.setCursor(0, printLine);
+          lcd.print(atol(input));
+          Serial.println(atol(input));
+          //lcd.print(atol(input));
+          
+         }
+         key = keypad.getKey();
        }
-       key = keypad.getKey();
-     }
+       returnVal = 0;
+    }
+    else
+      returnVal = -1;
   }
-  else
-    return -1;
 
   
   return atol(input);
@@ -134,8 +141,8 @@ Card findCards()
   // Flag so we know when a tag is over
   boolean tag = false;
   // This makes sure the whole tag is in the serial buffer before
-  // reading, the Arduino can read faster than the ID module can deliver!
- // Serial.println(rSerial.available());
+  // reading, the Arduino can read faster than the ID module can deliver
+ // Serial.println(rSerial.available()); 
  Card temp;
  while(!tag){
     if (rSerial.available() == tagLen) {
@@ -188,23 +195,21 @@ Card findCards()
         char num[3];
         num[0] =keyTags[ct][1];
         num[1] =keyTags[ct][2];
-        // Put the action of your choice here!
+        // Put the action of your choice here
         
         // set the cursor to column 0, line 1
         // (note: line 1 is the second row, since counting begins with 0):
         
         temp.number = atoi(num);
         temp.suit = keyTags[ct][0];
-        lcd.setCursor(0, 1);
-        lcd.print("Success!");
-        lcd.setCursor(0, 2);
-        lcd.print(newTag);
-        Serial.println("Success!");
+        writeToLCD("Card read", 1);
+        delay(2000);
+        Serial.println("Success");
         
       }
       else {
           // This prints out unknown cards so you can add them to your knownTags as needed
-          Serial.print("Unknown tag! ");
+          Serial.print("Unknown tag");
           Serial.print(newTag);
           Serial.println();
       }
@@ -235,10 +240,20 @@ int get_bet_amount(int start, int amount_to_call)
   Serial.println("Amount to call: %d\n", amount_to_call-t.p[start].bet_for_round);
   Serial.println("*Enter bet: ");
   */
-  writeToLCD("Amount to call:"+amount_to_call-t.p[start].bet_for_round, 0);
   
-  int bet = readFromKeypad(1);
-  Serial.println("\n");
+  clearScreen();
+  sprintf(buffer,"Player %d", start+1);   
+  writeToLCD(buffer, 0);
+  sprintf(buffer,"Amount to call: %d", amount_to_call-t.p[start].bet_for_round);   
+  writeToLCD(buffer, 1);
+  
+  int bet = readFromKeypad(2);
+
+  clearScreen();
+  sprintf(buffer,"Bet: %d", bet);   
+  writeToLCD(buffer, 0);
+  delay(2000);
+  
   return bet;
 }
 
@@ -254,24 +269,39 @@ int get_AI_bet(int start, int amount_to_call)
   Serial.println("Amount to call: %d\n", amount_to_call-t.p[start].bet_for_round);
   Serial.println("AI bets with %d\n\n", amount_to_call+5);
   */
-  writeToLCD("Amount to call:"+amount_to_call-t.p[start].bet_for_round, 0);
-  writeToLCD("AI bets with "+amount_to_call+5,1);
-  return amount_to_call+5;
+  clearScreen();
+  sprintf(buffer,"Amount to call: %d", amount_to_call-t.p[start].bet_for_round);   
+  writeToLCD(buffer, 0);
+  
+  int bet = AI_bet(amount_to_call-t.p[start].bet_for_round, t.p[start].bet_for_round, t.pot, t.p[start].stack);
+  
+  sprintf(buffer, "AI bets with %d", AI_bet);
+  writeToLCD(buffer,1);
+  delay(2000);
+  return bet;
 }
 
 int get_total_players()
 {
   //Serial.println("*Input total number of players (n<10): ");
-  writeToLCD("*Input total number of players (n<10):",0);
-  int total = readFromKeypad(1);
-  writeToLCD("*Is there an AI player? ",0);
-  writeToLCD("*1 = Y , 2 =N ",1);
+  clearScreen();
+  writeToLCD("*Input total number",0);
+  writeToLCD("of players (n < 10):",1);
+  int total = readFromKeypad(2);
+  clearScreen();
+  writeToLCD("*Is there an AI? ",0);
+  writeToLCD("*1 = Y , 2 = N ",1);
   int response = readFromKeypad(2);
-  if(response == 1)
+  if(response == 1){
     t.is_AI = 1;
-  else
+    writeToLCD("AI is playing", 3);
+  }
+  else {
     t.is_AI = 0;
-  Serial.println("\n");
+    writeToLCD("AI is not playing", 3);
+  }
+  delay(2000);
+  
   return total;
 }
 
@@ -316,42 +346,77 @@ int next_player_hand(int base_index)
 // input the AI cards via the RFID scanner
 void input_AI_cards()
 {
-  
+ clearScreen();
+ writeToLCD("Scan AI card 1", 0);
+ a.c1 = findCards();
+ clearScreen();
+ writeToLCD("Scan AI card 2", 0);
+ a.c2 = findCards();
 }
 
 // input the flop cards via the RFID scanner
 void input_flop_cards()
 {
-  
+ clearScreen();
+ writeToLCD("Scan table card 1", 0);
+ a.table_cards[0] = findCards();
+ clearScreen();
+ writeToLCD("Scan table card 2", 0);
+ a.table_cards[1] = findCards();
+ clearScreen();
+ writeToLCD("Scan table card 3", 0);
+ a.table_cards[2] = findCards();
+ a.table_size = 3;
 }
 
 // input the turn cards via the RFID scanner
 void input_turn_cards()
 {
-  
+ clearScreen();
+ writeToLCD("Scan table card 4", 0);
+ a.table_cards[3] = findCards();
+ a.table_size = 4; 
 }
 
 // input the river cards via the RFID scanner
 void input_river_cards()
 {
-  
+ clearScreen();
+ writeToLCD("Scan table card 5", 0);
+ a.table_cards[4] = findCards();
+ a.table_size = 5; 
 }
 
 // prints to players to see who winner is, gets input, return value is player number (NOT INDEX)
 int get_winner()
 {
   // temp solution
-  return next_player_hand(0);
+  bool valid = false;
+  int winner = -1;
+  if(!valid)
+  {
+    clearScreen();
+    writeToLCD("Enter hand winner: ", 0);
+    winner = readFromKeypad(1);
+    for(int i = 0; i < t.total_players; ++i)
+    {
+      if(t.p[i].in_hand == 1 && winner+1 == i)
+        valid = true; 
+    }
+  }
+  return winner+1;
 }
 
 // set the winner of the hand
 void set_winner(int who_won)
 {
-  //Serial.println("\n********************\nPlayer %d won the hand! %d will be added to their stack of %d!\n********************\n\n", who_won+1, t.pot, t.p[who_won].stack);
-  String message = "Player"+ (who_won+1);
-  message +=+"won the hand!";
-  writeToLCD(message,0);
-  writeToLCD(t.p[who_won].stack+"will be added to their stack",1);
+  //Serial.println("\n********************\nPlayer %d won the hand %d will be added to their stack of %d\n********************\n\n", who_won+1, t.pot, t.p[who_won].stack);
+  sprintf(buffer, "Player %d won", who_won+1);
+  writeToLCD(buffer,0);
+  sprintf(buffer, "%d is added to stack", t.p[who_won].stack);
+  writeToLCD(buffer,1);
+  delay(3000);
+  
   t.p[who_won].stack += t.pot;
   t.pot = 0;
   for(int i = 0; i < t.total_players; ++i)
@@ -365,8 +430,11 @@ void set_winner(int who_won)
 void input_winner()
 {
   // get which is winner from numpad
-  Serial.println("SHOWDOWN!!!\n");
-
+  Serial.println("SHOWDOWN\n");
+  clearScreen();
+  writeToLCD("SHOWDOWN", 0);
+  delay(2000);
+  
   int winner = get_winner();
 
   set_winner(winner);
@@ -494,32 +562,28 @@ int betting_round(int start, int max_bet)
 
 int start_hand()
 {
-  
-  Serial.println("Hand is starting!\n");
-
-  if(t.is_AI == 1)
-  {
-    input_AI_cards();
-  }
+  clearScreen();
+  writeToLCD("Hand is starting", 0);
+  delay(2000);
 
   // deduct blinds--------------------------------------------------
   
-  Serial.println("--------------------\n");
-
   // set everyone who is in game to be in hand as well
   for(int i = 0; i < t.total_players; ++i)
   {
     t.p[i].bet_for_round = 0;
     //Serial.println("Player %d's stack: %d\n", i+1, t.p[i].stack);
   }
-
-  Serial.println("--------------------\n");
-
+  
+   //concating string with player num
+   //buffer used to format a line (+1 is for trailing 0)
+  clearScreen();
+  sprintf(buffer,"Player %d has",t.dealer_button+1);   
+  writeToLCD(buffer,0);
+  //delete buffer;
   //Serial.println("Player %d has the dealer chip.\n", t.dealer_button+1);
-  String m="Player"+(t.dealer_button+1);
-  m+="has the dealer chip";
-  writeToLCD(m,0);
-  delay(1000);                  // waits for a second
+  writeToLCD("dealer chip", 1);
+  delay(3000);                  // waits for a second
 
   int small_index = next_player_game(t.dealer_button);
   if(t.p[small_index].stack < SMALL_BLIND)
@@ -534,8 +598,12 @@ int start_hand()
   }
   
   //Serial.println("Deducting small blind of %d from player %d.\n", SMALL_BLIND, small_index+1);
-  writeToLCD("Deducting small blind",0);
-  delay(1000);                  // waits for a second
+  clearScreen();
+  writeToLCD("Deducting small",0);
+  sprintf(buffer,"blind from player %d", small_index+1);   
+  writeToLCD(buffer,1);
+  //writeToLCD("blind from player " + (small_index+1), 1);
+  delay(2000);                  // waits for two second
 
   int big_index = next_player_game(small_index);
   if(t.p[big_index].stack < BIG_BLIND)
@@ -550,8 +618,11 @@ int start_hand()
     t.p[big_index].bet_for_round = BIG_BLIND;
   }
   //Serial.println("Deducting big blind of %d from player %d.\n", BIG_BLIND, big_index+1);
-  writeToLCD("Deducting big blind",0);
-  delay(1000);                  // waits for a second
+  clearScreen();
+  writeToLCD("Deducting big",0);
+  sprintf(buffer,"blind from player %d", big_index+1);   
+  writeToLCD(buffer,1);
+  delay(2000);                  // waits for a second
 
   t.pot = BIG_BLIND + SMALL_BLIND;
   //---------------------------------------------------------------
@@ -566,13 +637,18 @@ int start_hand()
   }
 
   // input AI's cards into system
-  input_AI_cards();
+  if(t.is_AI == 1)
+    input_AI_cards();
 
   // cards are then dealt, blinds set, now betting round
   int amount_to_call = BIG_BLIND;
   
   // start is the current index of the player who needs to bet
   int start = big_index;
+
+  clearScreen();
+  writeToLCD("Betting round", 0);
+  delay(2000);
   
   return betting_round(start, amount_to_call);
   
@@ -580,10 +656,12 @@ int start_hand()
 
 int flop()
 {
-  //Serial.println("The flop is starting!\n");
-  writeToLCD("The flop is starting",0);
-    delay(1000);                  // waits for a second
-  input_flop_cards();
+  //Serial.println("The flop is starting\n");
+  clearScreen();
+  writeToLCD("Flop is starting",0);
+  delay(2000);                  // waits for a second
+  if(t.is_AI == 1)
+    input_flop_cards();
 
   int start = t.dealer_button;
   if(t.p[start].in_hand == 0)
@@ -591,16 +669,23 @@ int flop()
     start = next_player_hand(start);
   }
 
+  clearScreen();
+  writeToLCD("Flop betting round", 0);
+  delay(2000);
+  
   return betting_round(start, 0);
 
 }
 
 int turn()
 {
-  Serial.println("The turn is starting!\n");
-    delay(1000);                  // waits for a second
-   
-  input_turn_cards();
+  //Serial.println("The turn is starting\n");
+  clearScreen();
+  writeToLCD("Turn is starting",0);
+  delay(2000);                  // waits for a second
+
+  if(t.is_AI == 1)
+    input_turn_cards();
 
   int start = t.dealer_button;
   if(t.p[start].in_hand == 0)
@@ -608,15 +693,22 @@ int turn()
     start = next_player_hand(start);
   }
 
+  clearScreen();
+  writeToLCD("Turn betting round", 0);
+  delay(2000);
+  
   return betting_round(start, 0);
 }
 
 int river()
 {
-  Serial.println("The river is starting!\n");
-  writeToLCD("The river is starting!",0);
-  delay(1000);
-  input_river_cards();
+  //Serial.println("The river is starting\n");
+  clearScreen();
+  writeToLCD("River is starting",0);
+  delay(2000);
+
+  if(t.is_AI == 1)
+    input_river_cards();
 
   int start = t.dealer_button;
   if(t.p[start].in_hand == 0)
@@ -624,6 +716,10 @@ int river()
     start = next_player_hand(start);
   }
 
+  clearScreen();
+  writeToLCD("River betting round", 0);
+  delay(2000);
+  
   return betting_round(start, 0);
 
 }
@@ -685,11 +781,11 @@ void initializeGame()
     t.AI_index = t.total_players;
     ++t.total_players;
   }
-
-  Serial.println("Time to start the game!\n");
-  writeToLCD("Time to start the game!",0);
-  delay(1000);
+  
+  //Serial.println("Time to start the game");
+  clearScreen();
+  writeToLCD("Time to start",0);
+  writeToLCD("the game",1);
+  delay(2000);
   run_Game();
 }
-
-
