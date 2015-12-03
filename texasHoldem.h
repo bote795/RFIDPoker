@@ -358,13 +358,13 @@ void input_AI_cards()
 void input_flop_cards()
 {
  clearScreen();
- writeToLCD("Scan table card 1", 0);
+ writeToLCD("Scan flop card 1", 0);
  a.table_cards[0] = findCards();
  clearScreen();
- writeToLCD("Scan table card 2", 0);
+ writeToLCD("Scan flop card 2", 0);
  a.table_cards[1] = findCards();
  clearScreen();
- writeToLCD("Scan table card 3", 0);
+ writeToLCD("Scan flop card 3", 0);
  a.table_cards[2] = findCards();
  a.table_size = 3;
 }
@@ -373,7 +373,7 @@ void input_flop_cards()
 void input_turn_cards()
 {
  clearScreen();
- writeToLCD("Scan table card 4", 0);
+ writeToLCD("Scan turn card", 0);
  a.table_cards[3] = findCards();
  a.table_size = 4; 
 }
@@ -382,7 +382,7 @@ void input_turn_cards()
 void input_river_cards()
 {
  clearScreen();
- writeToLCD("Scan table card 5", 0);
+ writeToLCD("Scan river card", 0);
  a.table_cards[4] = findCards();
  a.table_size = 5; 
 }
@@ -400,25 +400,25 @@ int get_winner()
     winner = readFromKeypad(1);
     for(int i = 0; i < t.total_players; ++i)
     {
-      if(t.p[i].in_hand == 1 && winner+1 == i)
+      if(t.p[i].in_hand == 1 && winner-1 == i)
         valid = true; 
     }
   }
-  return winner+1;
+  return winner-1;
 }
 
 // set the winner of the hand
 void set_winner(int who_won)
 {
+  t.p[who_won].stack += t.pot;
+  t.pot = 0;
+  clearScreen();
   //Serial.println("\n********************\nPlayer %d won the hand %d will be added to their stack of %d\n********************\n\n", who_won+1, t.pot, t.p[who_won].stack);
   sprintf(buffer, "Player %d won", who_won+1);
   writeToLCD(buffer,0);
-  sprintf(buffer, "%d is added to stack", t.p[who_won].stack);
+  sprintf(buffer, "Stack: %d", t.p[who_won].stack);
   writeToLCD(buffer,1);
   delay(3000);
-  
-  t.p[who_won].stack += t.pot;
-  t.pot = 0;
   for(int i = 0; i < t.total_players; ++i)
   {
     if(t.p[i].stack == 0)
@@ -430,7 +430,6 @@ void set_winner(int who_won)
 void input_winner()
 {
   // get which is winner from numpad
-  Serial.println("SHOWDOWN\n");
   clearScreen();
   writeToLCD("SHOWDOWN", 0);
   delay(2000);
@@ -583,7 +582,7 @@ int start_hand()
   //delete buffer;
   //Serial.println("Player %d has the dealer chip.\n", t.dealer_button+1);
   writeToLCD("dealer chip", 1);
-  delay(3000);                  // waits for a second
+  delay(2000);                  // waits for a second
 
   int small_index = next_player_game(t.dealer_button);
   if(t.p[small_index].stack < SMALL_BLIND)

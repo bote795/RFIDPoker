@@ -66,7 +66,7 @@ void setup() {
   initializeGame();
 
 }
-
+//middle pin is making a short with the actual port
 void loop() {
   
 }
