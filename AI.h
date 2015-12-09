@@ -1,4 +1,4 @@
-#define PERCENT_OFFSET  0.20
+#define PERCENT_OFFSET  0.25
 
 // returns a random number within a range
 int random_int(float value)
@@ -7,8 +7,7 @@ int random_int(float value)
   int offset = (int)ceil(value*PERCENT_OFFSET);
   int max = (int)ceil(value) + offset;
   int min = (int)ceil(value) - offset;
-
-  return random(min, max+1);
+  return random(min, max + 1);
 }
 
 int preflop_value()
@@ -92,21 +91,21 @@ int preflop_value()
       }
     }
   }
-  else if (n1 >= 11 && n2 >= 11)
+  else if (n1 >= 11 || n2 >= 11)
   {
     if (s1 == s2)                       // suited
     {
-      if ((n1 == 13 || n2 == 13) && (n1 >= 11 || n2 >= 11)) // K-Q, K-J
+      if ((n2 == 13 && n1 >= 11) || (n1 == 13 && n2 >= 11)) // K-Q, K-J
       {
         value = 80;
       }
-      else if ((n1 == 12 || n2 == 12) && (n1 == 11 || n2 == 11))  // Q-J
+      else if ((n1 == 11 && n2 == 12) || (n1 == 12 && n2 == 11))  // Q-J
       {
         value = 75;
       }
       else                          // K:J-2:10
       {
-        if ((n1 >= 11 || n2 >= 11) && (n1 == 10 || n2 == 10))
+        if ((n1 == 10 && n2 >= 11) || (n2 == 10 && n1 >= 11))   // K:J - 10
           value = 55;
         else
           value = 45;
@@ -114,24 +113,24 @@ int preflop_value()
     }
     else                            // unsuited
     {
-      if ((n1 == 13 || n2 == 13) && (n1 >= 11 || n2 >= 11)) // K-Q, K-J
+      if ((n2 == 13 && n1 >= 11) || (n1 == 13 && n2 >= 11)) // K-Q, K-J
       {
         value = 75;
       }
-      else if ((n1 == 12 || n2 == 12) && (n1 == 11 || n2 == 11))  // Q-J
+      else if ((n1 == 11 && n2 == 12) || (n1 == 12 && n2 == 11))  // Q-J
       {
         value = 70;
       }
-      else
+      else                          // K:J-2:10
       {
-        if ((n1 >= 11 || n2 >= 11) && (n1 == 10 || n2 == 10))
+        if ((n1 == 10 && n2 >= 11) || (n2 == 10 && n1 >= 11))   // K:J - 10
           value = 50;
         else
           value = 40;
       }
     }
   }
-  else if ((n1 == 10 || n2 == 10) || (n1 == 9 || n2 == 9))      // one 10 or one 9
+  else if ((n1 == 10 && n2 == 9) || (n1 == 9 && n2 == 10))      // 9-10, 10-9
   {
     if (s1 == s2)                       // suited
     {
@@ -152,7 +151,7 @@ int preflop_value()
   {
     if (s1 == s2)                       // suited
     {
-      if ((n1 == 9) || (n2 == 9) || (n1 == 8) || (n2 == 8)) // 7-8, 8-9, 9-10
+      if ((n1 == 8 || n2 == 8) || (n1 == 9 || n2 == 9)) // 7-8, 8-9, 9-10
       {
         value += 20;
       }
@@ -163,7 +162,7 @@ int preflop_value()
     }
     else
     {
-      if ((n1 == 9) || (n2 == 9) || (n1 == 8) || (n2 == 8)) // 7-8, 8-9, 9-10
+      if ((n1 == 8 || n2 == 8) || (n1 == 9 || n2 == 9)) // 7-8, 8-9, 9-10
       {
         value += 15;
       }
@@ -175,7 +174,6 @@ int preflop_value()
   }
 
   return value;
-
 }
 
 
@@ -289,13 +287,11 @@ int postflop_value()
   {
     flush_4 = true;
     value = 40;
-    return value;
   }
   else if (suit_count1 == 3 || suit_count2 == 3 && a.table_size == 3) // 3 of same suit and its flop
   {
     flush_3 = true;
     value = 10;
-    return value;
   }
   else
   {
@@ -368,9 +364,9 @@ int postflop_value()
     if (best1 >= 10)
       value = 60;
     else if (best1 >= 6)
-      value = 45;
-    else
       value = 30;
+    else
+      value = 20;
   }
   else if (n1 == high || n2 == high)
   {
@@ -388,9 +384,6 @@ int postflop_value()
   }
 
   return value;
-
-  // 
-
 }
 
 #define PERCENT_OF_THRESHOLD_PREFLOP  0.20
@@ -414,11 +407,11 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
   int bet = 0;
   float threshold = 0.0;
   float thres_value = 0.0;
-
+  
   float bluff = (float)(random(101)) / 100;
   float slow = (float)(random(101)) / 100;
   float call = (float)(random(101)) / 100;
-  
+
   // pre-flop strategy
   // based on two first cards and the bets from others
   // if Ace suited with .... this value is assigned to it
@@ -433,7 +426,7 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
     threshold = (float)value / 100;
 
     // first time bet for round
-    if (bet_for_round == 0)
+    if (bet_for_round == 0 || bet_for_round == 10 || bet_for_round == 20)
     {
       thres_value = stack * threshold;
       a.threshold_value = thres_value;
@@ -452,10 +445,10 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
       if ((bet_for_round + amount_to_call) > thres_value)
       {
         // do we call this or do we fold? we already put in bet_for_round with a hand value of threshold
-        if(value >= 90)
+        if (value >= 80)
           bet = amount_to_call;
         else
-          bet = thres_value - bet_for_round;
+          bet = 0;
       }
       else
       {
@@ -468,12 +461,17 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
           // how much to raise by?
 
           // how much more can we bet till we reach the threshold
-          int difference = (int)(thres_value) - (bet_for_round + amount_to_call);
+          int difference = (int)(thres_value)-(bet_for_round + amount_to_call);
 
-          // lets raise by a random amount thats left, but make it a percent of the total difference
-          // like if difference is 200, we only bet from 0-100 (50% of difference)
-          float raise_amount = ceil((float)((random(difference+1))*RAISE_PERCENT));
-          bet = amount_to_call + (int)raise_amount;
+          if (difference <= 0)
+            bet = amount_to_call;
+          else
+          {
+            // lets raise by a random amount thats left, but make it a percent of the total difference
+            // like if difference is 200, we only bet from 0-100 (50% of difference)
+            float raise_amount = ceil((float)(rand() % difference)*RAISE_PERCENT);
+            bet = amount_to_call + (int)raise_amount;
+          }
         }
       }
     }
@@ -484,22 +482,17 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
     if (bet < amount_to_call)
     {
       // if the random bet made it go below amount to call when the thres is actually above it
-      if (thres_value > (amount_to_call + bet_for_round))
+      if (thres_value >(amount_to_call + bet_for_round))
         bet = amount_to_call;
 
       int difference = amount_to_call - bet;
-      int per_dif = (int) (PERCENT_DIFFERENCE*bet);
+      int per_dif = (int)(PERCENT_DIFFERENCE*bet);
       if (difference < per_dif)
         bet = amount_to_call;
 
       // if i already bet X much, i should call to a point... when do i cut my loses
-      int per_round = (int) (PERCENT_ROUND_BET*initial_stack);
+      int per_round = (int)(PERCENT_ROUND_BET*initial_stack);
       if ((initial_stack - stack) > per_round)
-        bet = amount_to_call;
-
-      // bluff chance, and if bluff, how much to bluff by is determined by another random variable, 1-75 (75%) = low bluff, 75-95 (20%) = medium bluff, 95-100 (5%) = high bluff
-      // should there be chance to under-bet hand? if really good hand, should buff low to fool opponent?
-      if (bluff <= BLUFF_CHANCE)
         bet = amount_to_call;
 
     }
@@ -546,10 +539,10 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
       if ((bet_for_round + amount_to_call) > thres_value)
       {
         // do we call this or do we fold? we already put in bet_for_round with a hand value of threshold
-        if(value >= 80)
+        if (value >= 80)
           bet = amount_to_call;
         else
-          bet = thres_value - bet_for_round;
+          bet = 0;
       }
       else
       {
@@ -564,10 +557,15 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
           // how much more can we bet till we reach the threshold
           int difference = (int)(thres_value)-(bet_for_round + amount_to_call);
 
-          // lets raise by a random amount thats left, but make it a percent of the total difference
-          // like if difference is 200, we only bet from 0-100 (50% of difference)
-          float raise_amount = ceil((float)((random(difference+1))*RAISE_PERCENT));
-          bet = amount_to_call + (int)raise_amount;
+          if (difference <= 0)
+            bet = amount_to_call;
+          else
+          {
+            // lets raise by a random amount thats left, but make it a percent of the total difference
+            // like if difference is 200, we only bet from 0-100 (50% of difference)
+            float raise_amount = ceil((float)((random(difference + 1))*RAISE_PERCENT));
+            bet = amount_to_call + (int)raise_amount;
+          }
         }
       }
     }
@@ -578,7 +576,7 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
     if (bet < amount_to_call)
     {
       // if the random bet made it go below amount to call when the thres is actually above it
-      if (thres_value > (amount_to_call + bet_for_round))
+      if (thres_value >(amount_to_call + bet_for_round))
         bet = amount_to_call;
 
       int difference = amount_to_call - bet;
@@ -594,7 +592,7 @@ int AI_bet(int amount_to_call, int bet_for_round, int pot, int stack)
       // bluff chance, and if bluff, how much to bluff by is determined by another random variable, 1-75 (75%) = low bluff, 75-95 (20%) = medium bluff, 95-100 (5%) = high bluff
       // should there be chance to under-bet hand? if really good hand, should buff low to fool opponent?
       if (bluff <= BLUFF_CHANCE)
-        bet = amount_to_call;
+        bet = random_int((float)(amount_to_call*2));
 
     }
     else
