@@ -48,6 +48,7 @@ http://bildr.org/2011/02/rfid-arduino/
 #include <Key.h>
 #include <Keypad.h>
 #include <math.h>
+#include <Time.h>
 #include "texasHoldem.h"
 
 void setup() {
@@ -63,6 +64,7 @@ void setup() {
   writeToLCD("Welcome to",0);
   writeToLCD("Texas Holdem",1);
   delay(2000);
+  randomSeed(analogRead(0));
   initializeGame();
 
 }

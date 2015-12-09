@@ -158,8 +158,13 @@ struct AI
 {
   Card c1;
   Card c2;
+
   Card table_cards[5];
   int table_size;
+
+  // add to game, when start of hand set this variable if is_AI == 1
+  int initial_stack;
+  float threshold_value;
 };
 
 AI a;

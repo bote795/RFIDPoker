@@ -149,28 +149,26 @@ Card findCards()
       tag = true;
       Serial.println("avilable tag");
     }
-  
-    if (tag == true) {
-      while (rSerial.available()) {
-        // Take each byte out of the serial buffer, one at a time
-        readByte = rSerial.read();
-        Serial.println("reading tag");
-        /* This will skip the first byte (2, STX, start of text) and the last three,
-        ASCII 13, CR/carriage return, ASCII 10, LF/linefeed, and ASCII 3, ETX/end of 
-        text, leaving only the unique part of the tag string. It puts the byte into
-        the first space in the array, then steps ahead one spot */
-        if (readByte != 2 && readByte!= 13 && readByte != 10 && readByte != 3) {
-          newTag[i] = readByte;
-          i++;
-        }
-  
-        // If we see ASCII 3, ETX, the tag is over
-        if (readByte == 3) {
-          tag = false;
-        }
-  
-      }
+ }
+  while (rSerial.available()) {
+    // Take each byte out of the serial buffer, one at a time
+    readByte = rSerial.read();
+    Serial.println("reading tag");
+    /* This will skip the first byte (2, STX, start of text) and the last three,
+    ASCII 13, CR/carriage return, ASCII 10, LF/linefeed, and ASCII 3, ETX/end of 
+    text, leaving only the unique part of the tag string. It puts the byte into
+    the first space in the array, then steps ahead one spot */
+    if (readByte != 2 && readByte!= 13 && readByte != 10 && readByte != 3) {
+      newTag[i] = readByte;
+      i++;
     }
+
+    // If we see ASCII 3, ETX, the tag is over
+    if (readByte == 3) {
+      break;
+    }
+
+  }
   
   
     // don't do anything if the newTag array is full of zeroes
@@ -203,7 +201,7 @@ Card findCards()
         temp.number = atoi(num);
         temp.suit = keyTags[ct][0];
         writeToLCD("Card read", 1);
-        delay(2000);
+        delay(1000);
         Serial.println("Success");
         
       }
@@ -212,6 +210,10 @@ Card findCards()
           Serial.print("Unknown tag");
           Serial.print(newTag);
           Serial.println();
+          clearScreen();
+          writeToLCD("Retry scanning card", 0);
+          delay(1000);
+          return findCards();
       }
     }
   
@@ -222,7 +224,6 @@ Card findCards()
     }
     Serial.println("We are out");
     return temp;
- }
   
 }
 
@@ -242,17 +243,19 @@ int get_bet_amount(int start, int amount_to_call)
   */
   
   clearScreen();
-  sprintf(buffer,"Player %d", start+1);   
+  sprintf(buffer,"Player %d enter bet", start+1);   
   writeToLCD(buffer, 0);
   sprintf(buffer,"Amount to call: %d", amount_to_call-t.p[start].bet_for_round);   
   writeToLCD(buffer, 1);
   
   int bet = readFromKeypad(2);
 
+  if(bet > t.p[start].stack)
+    bet = t.p[start].stack;
+  
   clearScreen();
-  sprintf(buffer,"Bet: %d", bet);   
+  sprintf(buffer,"Player %d bet %d", start+1, bet);   
   writeToLCD(buffer, 0);
-  delay(2000);
   
   return bet;
 }
@@ -269,15 +272,13 @@ int get_AI_bet(int start, int amount_to_call)
   Serial.println("Amount to call: %d\n", amount_to_call-t.p[start].bet_for_round);
   Serial.println("AI bets with %d\n\n", amount_to_call+5);
   */
+    
+  int bet = AI_bet(amount_to_call-t.p[start].bet_for_round, t.p[start].bet_for_round, t.pot, t.p[start].stack);
+
   clearScreen();
-  sprintf(buffer,"Amount to call: %d", amount_to_call-t.p[start].bet_for_round);   
+  sprintf(buffer,"AI bet %d", bet);   
   writeToLCD(buffer, 0);
   
-  int bet = AI_bet(amount_to_call-t.p[start].bet_for_round, t.p[start].bet_for_round, t.pot, t.p[start].stack);
-  
-  sprintf(buffer, "AI bets with %d", AI_bet);
-  writeToLCD(buffer,1);
-  delay(2000);
   return bet;
 }
 
@@ -322,6 +323,7 @@ bool check_game_over()
 // return the index of the next player that is still in game from the base index
 int next_player_game(int base_index)
 {
+  Serial.println("GOT IN NEXT PLAYER GAME");
   int next_index = (base_index+1) % t.total_players;
   while(t.p[next_index].in_game == 0)
   {
@@ -334,6 +336,7 @@ int next_player_game(int base_index)
 // return the index of the next player that is still in hand from the base index
 int next_player_hand(int base_index)
 {
+  Serial.println("GOT IN NEXT PLAYER HAND");
   int next_index = (base_index+1) % t.total_players;
   while(t.p[next_index].in_hand == 0)
   {
@@ -352,6 +355,8 @@ void input_AI_cards()
  clearScreen();
  writeToLCD("Scan AI card 2", 0);
  a.c2 = findCards();
+ a.initial_stack = t.p[t.AI_index].stack;
+ 
 }
 
 // input the flop cards via the RFID scanner
@@ -397,7 +402,14 @@ int get_winner()
   {
     clearScreen();
     writeToLCD("Enter hand winner: ", 0);
-    winner = readFromKeypad(1);
+    if(t.is_AI == 1 && t.p[t.AI_index].in_hand == 1)
+    {
+        sprintf(buffer,"AI is player %d", t.AI_index + 1);   
+        writeToLCD(buffer, 1);
+        winner = readFromKeypad(2);
+    }
+    else
+      winner = readFromKeypad(1);
     for(int i = 0; i < t.total_players; ++i)
     {
       if(t.p[i].in_hand == 1 && winner-1 == i)
@@ -422,7 +434,10 @@ void set_winner(int who_won)
   for(int i = 0; i < t.total_players; ++i)
   {
     if(t.p[i].stack == 0)
+    {
       t.p[i].in_game = 0;
+      t.p[i].in_hand = 0;
+    }
   }
 }
 
@@ -442,30 +457,43 @@ void input_winner()
 
 int betting_round(int start, int max_bet)
 {
-  // the player index with the max bet
-  int max_index = start;
-
   // index of player who won
   int who_won = -1;
 
   // finds out the number of players still in the hand
   int total_players_hand = 0;
+  int all_in_count = 0;
   for(int i = 0; i < t.total_players; ++i)
   {
-    if(t.p[i].in_hand)
+    if(t.p[i].in_hand == 1 && t.p[i].in_game == 1)
+    {
       ++total_players_hand;
+      if(t.p[i].stack == 0)
+        all_in_count++;
+    }
   }
 
+  if(all_in_count >= (total_players_hand - 1))
+    return who_won;
+  
   // go around the table once
   for(int i = 0; i < total_players_hand; ++i)
   {
-    
+    Serial.println("CALL NEXT PLAYER HAND");
     // find next player to bet who is in hand
     start = next_player_hand(start);
-
-    // if player is still in hand, but has already gone all in, skip that player
+    Serial.println("RETURN NEXT PLAYER HAND");
+    int end1 = start;
     while(t.p[start].stack == 0)
+    {
       start = next_player_hand(start);
+      // all players are all in
+      if(start == end1)
+        return -1;
+    }
+
+    if(t.p[start].bet_for_round == max_bet && max_bet != 0)
+      continue;
     
     // prompt player at index with amount to call
     // display the current players stack, amount to call, and current bet as they input it
@@ -486,21 +514,34 @@ int betting_round(int start, int max_bet)
     t.p[start].stack -= bet;
 
     // check the bet
-    if(t.p[start].bet_for_round == max_bet)
+    if(t.p[start].stack == t.p[start].bet_for_round)
+    {
+      t.pot += bet;
+      writeToLCD("All in", 1);
+    }
+    else if(t.p[start].bet_for_round == max_bet)
     {
       // they called the current max bet
       t.pot += bet;
+   
+      writeToLCD("Called", 1);
+      
     }
     else if(t.p[start].bet_for_round > max_bet)
     {
+      sprintf(buffer, "Raised by %d", t.p[start].bet_for_round-max_bet);
+      writeToLCD(buffer,1);
+      
       // they raised the current max bet
       max_bet = t.p[start].bet_for_round;
       t.pot += bet;
-      max_index = start;
+
     }
     else
     {
       // they folded
+      writeToLCD("Folded", 1);
+      
       t.p[start].in_hand = 0;
       t.p[start].stack += bet;
       t.p[start].bet_for_round -= bet;
@@ -522,37 +563,54 @@ int betting_round(int start, int max_bet)
         return player_index;
 
     }
+    
+    if(start == t.AI_index)
+      delay(1000);
+    delay(2000);
   }
-  
-  // check if betting round is done
-  // occurs when all players in the hand have bet the same amount for the round
-  // or if they have gone all in
   bool done = true;
-  int bet = -1;
+  int players_all_in = 0;
+  int players_in_hand = 0;
   for(int i = 0; i < t.total_players; ++i)
   {
     if(t.p[i].in_hand == 1)
     {
-      if(bet == -1)
-        bet = t.p[i].bet_for_round;
-      else
-      {
-        if(bet != t.p[i].bet_for_round)
-        {
-          done = false;
-          break;
-        }
-      }
+      players_in_hand++;
+      if(t.p[i].stack == 0)
+        players_all_in++;
     }
   }
 
+  if(players_all_in >= (players_in_hand - 1))
+    done = true;
+  else
+    done = false;
   
-  if(!done)
-    who_won = betting_round(max_index, max_bet);
-
-  // once betting round is over, set eveyone's bet for round to 0
+  // check if betting round is done
+  // occurs when all players in the hand have bet the same amount for the round
+  // or if they have gone all in
+  int bet = 0;
   for(int i = 0; i < t.total_players; ++i)
-    t.p[i].bet_for_round = 0;
+  {
+    if(t.p[i].in_hand == 1)
+    {
+      if(t.p[i].bet_for_round > bet)
+        bet = t.p[i].bet_for_round;
+      if(bet != t.p[i].bet_for_round)
+      {
+        done = false;
+        break;
+      }
+    }    
+  }
+    
+  if(!done)
+  {
+    Serial.println("RECURSIVE CALL");
+    who_won = betting_round(start, max_bet);
+  }
+
+  Serial.println("ROUND OVER");
 
   return who_won;
 
@@ -649,8 +707,12 @@ int start_hand()
   writeToLCD("Betting round", 0);
   delay(2000);
   
-  return betting_round(start, amount_to_call);
-  
+  int winner = betting_round(start, amount_to_call);
+  // once betting round is over, set eveyone's bet for round to 0
+  for(int i = 0; i < t.total_players; ++i)
+    t.p[i].bet_for_round = 0;
+
+  return winner;
 }
 
 int flop()
@@ -672,8 +734,12 @@ int flop()
   writeToLCD("Flop betting round", 0);
   delay(2000);
   
-  return betting_round(start, 0);
+  int winner = betting_round(start, 0);
+  // once betting round is over, set eveyone's bet for round to 0
+  for(int i = 0; i < t.total_players; ++i)
+    t.p[i].bet_for_round = 0;
 
+  return winner;
 }
 
 int turn()
@@ -696,7 +762,12 @@ int turn()
   writeToLCD("Turn betting round", 0);
   delay(2000);
   
-  return betting_round(start, 0);
+  int winner = betting_round(start, 0);
+  // once betting round is over, set eveyone's bet for round to 0
+  for(int i = 0; i < t.total_players; ++i)
+    t.p[i].bet_for_round = 0;
+
+  return winner;
 }
 
 int river()
@@ -719,8 +790,12 @@ int river()
   writeToLCD("River betting round", 0);
   delay(2000);
   
-  return betting_round(start, 0);
+  int winner = betting_round(start, 0);
+  // once betting round is over, set eveyone's bet for round to 0
+  for(int i = 0; i < t.total_players; ++i)
+    t.p[i].bet_for_round = 0;
 
+  return winner;
 }
 
 void run_Game()
