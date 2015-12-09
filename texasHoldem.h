@@ -810,11 +810,7 @@ int run_Game()
     done = check_game_over();
 
     // move dealer button over 1 spot
-    t.dealer_button = (t.dealer_button + 1) % t.total_players;
-    while (t.p[(t.dealer_button + 1) % t.total_players].in_game == 0)
-    {
-      t.dealer_button = (t.dealer_button + 1) % t.total_players;
-    }
+    t.dealer_button = next_player_game(t.dealer_button);
   }
   return who_won;
 }
